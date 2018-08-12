@@ -34,4 +34,7 @@ infragram:	infragram.cpp jpeg.hpp ndvi.hpp
 ndvi:	ndvi.cpp ndvi.hpp jpeg.hpp
 	$(CXX) $(CXX_FLAGS) $(INCLUDE) -o $@ $< $(LIBS)
 
+tests:	jpeg
 
+jpeg:	jpeg.cpp jpeg.hpp
+	$(CXX) $(CXX_FLAGS) $(INCLUDE) -o $@ $< $(LIBS)
