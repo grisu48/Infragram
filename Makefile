@@ -28,5 +28,5 @@ clean:
 %.o:	%.cpp %.hpp
 	$(CXX) $(CXX_FLAGS) -c $(INCLUDE) -o $@ $< $(LIBS) 
 	
-infragram:	infragram.cpp jpeg.hpp
+infragram:	infragram.cpp jpeg.hpp ndvi.hpp
 	$(CXX) $(CXX_FLAGS) $(INCLUDE) -o $@ $< $(LIBS) 

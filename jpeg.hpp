@@ -3,6 +3,9 @@
  * Do not mind the crappy quality
  */
 
+#ifndef _INFRAGRAM_JPEG_HPP
+#define _INFRAGRAM_JPEG_HPP
+
 #include <stdio.h>
 #include <unistd.h>
 #include <jpeglib.h>
@@ -11,6 +14,7 @@
 
 #include <iostream>
 
+using namespace std;
 
 struct {
 	unsigned char r;
@@ -35,6 +39,15 @@ public:
 		const size_t size = 3*width*height;
 		this->bmap = new unsigned char[size];
 		memcpy(this->bmap, src.bmap, sizeof(unsigned char)*size);
+	}
+	Jpeg(Jpeg &&src) {
+		this->width = src.width;
+		this->height = src.height;
+		this->depth = src.depth;
+		this->bmap = src.bmap;
+		
+		src.width = src.height = src.depth = 0;
+		src.bmap = NULL;
 	}
 	Jpeg(const int width, const int height) {
 		this->width = width;
@@ -67,10 +80,10 @@ public:
 	  height = cinfo.output_height;
 
 	  unsigned char * pDummy = new unsigned char [width*height*3];
-	  unsigned char * pTest = pDummy;
-	  if (!pDummy) {
+	  if (!pDummy)
 	  	throw "Out of memory";
-	  }
+	  unsigned char * pTest = pDummy;
+	  
 	  row_stride = width * cinfo.output_components;
 	  pJpegBuffer = (*cinfo.mem->alloc_sarray)
 		((j_common_ptr) &cinfo, JPOOL_IMAGE, row_stride, 1);
@@ -99,45 +112,46 @@ public:
 	  depth = 32;
 	}
 	
-	void write(const char* filename, int quality=100) {
+	void write(const char* filename, int quality=100) const {
 		FILE *ofp;
-	  struct jpeg_compress_struct cinfo;   /* JPEG compression struct */
-	  struct jpeg_error_mgr jerr;          /* JPEG error handler */
-	  JSAMPROW row_pointer[1];             /* output row buffer */
-	  int row_stride;                      /* physical row width in output buf */
+		struct jpeg_compress_struct cinfo;   /* JPEG compression struct */
+		struct jpeg_error_mgr jerr;          /* JPEG error handler */
+		JSAMPROW row_pointer[1];             /* output row buffer */
+		int row_stride;                      /* physical row width in output buf */
 
-	  if ((ofp = fopen(filename, "wb")) == NULL)
-		throw "Error opening file";
+		if ((ofp = fopen(filename, "wb")) == NULL)
+			throw "Error opening file";
+		cinfo.err = jpeg_std_error(&jerr);
+		
+		jpeg_create_compress(&cinfo);
+		jpeg_stdio_dest(&cinfo, ofp);
+		
+		cinfo.image_width = this->width;
+		cinfo.image_height = this->height;
+		cinfo.input_components = 3;
+		cinfo.in_color_space = JCS_RGB;
+		
+		jpeg_set_defaults(&cinfo);
+		jpeg_set_quality(&cinfo, quality, 0);
+		jpeg_start_compress(&cinfo, TRUE);
 
-	  cinfo.err = jpeg_std_error(&jerr);
-	  jpeg_create_compress(&cinfo);
-	  jpeg_stdio_dest(&cinfo, ofp);
+		/* Calculate the size of a row in the image */
+		row_stride = cinfo.image_width * cinfo.input_components;
+		
+		/* compress the JPEG, one scanline at a time into the buffer */
+		while (cinfo.next_scanline < cinfo.image_height) {
+			//cout << "Write cinfo.next_scanline = " << cinfo.next_scanline << endl;
+			//row_pointer[0] = &(bmap[(cinfo.image_height - cinfo.next_scanline - 1)*row_stride]);
+			row_pointer[0] = &(bmap[(cinfo.next_scanline)*row_stride]);
+			jpeg_write_scanlines(&cinfo, row_pointer, 1);
+		}
 
-	  cinfo.image_width = this->width;
-	  cinfo.image_height = this->height;
-	  cinfo.input_components = 3;
-	  cinfo.in_color_space = JCS_RGB;
+		jpeg_finish_compress(&cinfo);
+		jpeg_destroy_compress(&cinfo);
 
-	  jpeg_set_defaults(&cinfo);
-	  jpeg_set_quality(&cinfo, quality, 0);
+		fclose(ofp);
 
-	  jpeg_start_compress(&cinfo, TRUE);
-
-	  /* Calculate the size of a row in the image */
-	  row_stride = cinfo.image_width * cinfo.input_components;
-
-	  /* compress the JPEG, one scanline at a time into the buffer */
-	  while (cinfo.next_scanline < cinfo.image_height) {
-		row_pointer[0] = &(bmap[(this->height - cinfo.next_scanline - 1)*row_stride]);
-		jpeg_write_scanlines(&cinfo, row_pointer, 1);
-	  }
-
-	  jpeg_finish_compress(&cinfo);
-	  jpeg_destroy_compress(&cinfo);
-
-	  fclose(ofp);
-	  
-	  // Everything good so far :-)
+		// Everything good so far :-)
 	}
 	
 	virtual ~Jpeg() {
@@ -147,10 +161,10 @@ public:
 		}
 	}
 	
-	rgb_t operator()(int x, int y) {
+	rgb_t operator()(int x, int y) const {
 		return this->rgb(x,y);
 	}
-	rgb_t rgb(int x, int y) {
+	rgb_t rgb(int x, int y) const {
 		//if(bmap == NULL) throw "No data";
 		rgb_t ret;
 		
@@ -169,41 +183,6 @@ public:
 		this->bmap[index+2] = rgb.b;
 	}
 };
-
-
-
-#if 0
-using namespace std;
-
-
-int main() {
-	try {
-		Jpeg jpeg("webcam_output.jpeg");
-		cout << "image read (" << jpeg.width << "x" << jpeg.height << ")" << endl;
-		
-		rgb_t rgb;
-		
-		rgb = jpeg(0,0);
-		cout << "(0,0) = " << (int)rgb.r << ',' << (int)rgb.g << ',' << (int)rgb.b << endl;
-		rgb = jpeg(0,1);
-		cout << "(0,1) = " << (int)rgb.r << ',' << (int)rgb.g << ',' << (int)rgb.b << endl;
-		rgb = jpeg(1,0);
-		cout << "(1,0) = " << (int)rgb.r << ',' << (int)rgb.g << ',' << (int)rgb.b << endl;
-		rgb = jpeg(1,1);
-		cout << "(1,1) = " << (int)rgb.r << ',' << (int)rgb.g << ',' << (int)rgb.b << endl;
-		rgb = jpeg(824,432);
-		cout << "(824,432) = " << (int)rgb.r << ',' << (int)rgb.g << ',' << (int)rgb.b << endl;
-		
-	} catch (const char* msg) {
-		cerr << "Error: " << msg << endl;
-		return EXIT_FAILURE;
-	} catch (...) {
-		cerr << "Unknown error" << endl;
-		return EXIT_FAILURE;
-	}
-	
-	return EXIT_SUCCESS;
-}
 
 
 #endif

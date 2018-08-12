@@ -21,6 +21,7 @@
 
 // Jpeg reading routines
 #include "jpeg.hpp"
+#include "ndvi.hpp"
 
 
 using namespace std;
@@ -181,9 +182,12 @@ static int read_video(const char* device, int width, int height, const char* jpg
 
 
 
-int main() {
+int main(int argc, char** argv) {
     const char* device = "/dev/video0";
     const char* filename = "webcam_output.jpeg";
+    
+    if (argc > 1) device = argv[1];
+    if (argc > 2) filename = argv[2];
     
     
     ::unlink(filename);
@@ -196,35 +200,10 @@ int main() {
  
  	try {
  		Jpeg jpeg(filename);
- 		
- 		// Processing image using NDVI analysis
- 		// Infragram: red channel = infrared, blue channel = visible
- 		// NDVI = (IR-RGB)/(IR+RGB) where IR is the near IR and RGB is the visible light
- 		// So for each pixel we are doing (R-B)/(R+B)
- 		const int width = jpeg.width;
- 		const int height= jpeg.height;
- 		
- 		Jpeg dest(width, height);
- 		
- 		for(int x=0;x<width;x++) {
- 			for(int y=0;y<height;y++) {
- 				rgb_t rgb = jpeg.rgb(x,y);
- 				
- 				const unsigned char ir = rgb.r;
- 				const unsigned char vis = rgb.b;
- 				
- 				const float ndvi = (float)(ir-vis)/(float)(ir+vis);
- 				//cout << (int)ir << '\t' << (int)vis << '\t' << ndvi << endl;
- 				unsigned char x = (unsigned char)(ndvi * 255.0);
- 				if(x > 255) x = 255;
- 				
- 				//rgb.r = x; rgb.g = x; rgb.b = x;
- 				dest.set(x,y, rgb);
- 			}
- 		}
+ 		Jpeg j_ndvi = ndvi(jpeg);
  		
  		::unlink("output.jpeg");
- 		dest.write("output.jpeg");
+ 		j_ndvi.write("output.jpeg");
  		
  		cout << "NDVI written to 'output.jpeg'" << endl;
  	} catch (const char* err) {
