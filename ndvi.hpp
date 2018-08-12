@@ -8,6 +8,7 @@
 #include <math.h>
 #include "jpeg.hpp"
 
+
 float min(float* array, size_t size) {
 	if(size == 0) return 0.0F;
 	float f_min = array[0];
@@ -63,8 +64,8 @@ static Jpeg ndvi(const Jpeg &jpeg) {
 	
 	
 	// Apply colormap
-	const float fmin = min(buffer, size);
-	const float fmax = max(buffer, size);
+	const float fmin = -1.0F; min(buffer, size);
+	const float fmax =  1.0F; max(buffer, size);
 	i = 0;
 	for(int x=0;x<width;x++) {
 		for(int y=0;y<height;y++) {
