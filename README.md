@@ -71,4 +71,4 @@ Currently only one colormap is supported: Red to green, where red is the minimum
 
 # License
 
-This program is licensed under the (WTFPL)[http://www.wtfpl.net/] License.
+This program is licensed under the [WTFPL](http://www.wtfpl.net/) License.
