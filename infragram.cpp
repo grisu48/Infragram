@@ -196,8 +196,12 @@ int main(int argc, char** argv) {
     	cout << "  2018, Felix Niederwanger" << endl;
     	cout << endl;
     	cout << "This program reads a picture from a INFRAGRAM camera and writes the NDVI processed jpeg picture to a file" << endl;
+				cout << endl;
     	cout << "Usage: " << argv[0] << " JPEG" << endl;
     	cout << "  For help type " << argv[0] << " --help" << endl;
+		cout << endl;
+		cout << "Example usage" << endl;
+		cout << "  " << argv[0] << " ndvi.jpeg              - Read default camera and writes NDVI picture to 'ndvi.jpeg'" << endl;
     	return EXIT_SUCCESS;
     }
     
@@ -211,6 +215,7 @@ int main(int argc, char** argv) {
 				cout << "  2018, Felix Niederwanger" << endl;
 				cout << endl;
 				cout << "This program reads a picture from a INFRAGRAM camera and writes the NDVI processed jpeg picture to a file" << endl;
+				cout << endl;
 				cout << "Usage: " << argv[0] << " [OPTIONS] NDVI-JPEG [CAMERA-JPEG]" << endl;
 				cout << endl;
 				cout << "Examples" << endl;
