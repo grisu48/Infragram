@@ -16,7 +16,7 @@ CC_FLAGS=$(O_FLAGS) -std=c99
 LIBS=-ljpeg
 INCLUDE=
 OBJS=
-BINS=infragram
+BINS=infragram ndvi
 
 
 # Default generic instructions
@@ -29,4 +29,9 @@ clean:
 	$(CXX) $(CXX_FLAGS) -c $(INCLUDE) -o $@ $< $(LIBS) 
 	
 infragram:	infragram.cpp jpeg.hpp ndvi.hpp
-	$(CXX) $(CXX_FLAGS) $(INCLUDE) -o $@ $< $(LIBS) 
+	$(CXX) $(CXX_FLAGS) $(INCLUDE) -o $@ $< $(LIBS)
+
+ndvi:	ndvi.cpp ndvi.hpp jpeg.hpp
+	$(CXX) $(CXX_FLAGS) $(INCLUDE) -o $@ $< $(LIBS)
+
+

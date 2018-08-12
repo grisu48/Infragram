@@ -46,7 +46,7 @@ static Jpeg ndvi(const Jpeg &jpeg) {
 	const size_t size = width*height;
 	
 	Jpeg dest(width, height);
-	float buffer[size];
+	float *buffer = new float[size];
 	rgb_t rgb;
 	
 	int i=0;
@@ -73,7 +73,7 @@ static Jpeg ndvi(const Jpeg &jpeg) {
 		}
 	}
 	
-	
+	delete[] buffer;
 	return dest;
 	
 }
