@@ -28,7 +28,10 @@ using namespace std;
 
 
 
-// This part is based on https://gist.github.com/mike168m/6dd4eb42b2ec906e064d
+/*
+ * This routine read a picture from V4L and stores it as JPEG in the given filename
+ * This part is based on https://gist.github.com/mike168m/6dd4eb42b2ec906e064d
+ */
 static int read_video(const char* device, int width, int height, const char* jpg_filename) {
 	int fd; // A file descriptor to the video device
     fd = open(device, O_RDWR);
@@ -62,9 +65,9 @@ static int read_video(const char* device, int width, int height, const char* jpg
 
 
     // 4. Request Buffers from the device
-    v4l2_requestbuffers requestBuffer = {0};
+    v4l2_requestbuffers requestBuffer;// = {0};
     requestBuffer.count = 1; // one request buffer
-    requestBuffer.type = V4L2_BUF_TYPE_VIDEO_CAPTURE; // request a buffer wich we an use for capturing frames
+    requestBuffer.type = V4L2_BUF_TYPE_VIDEO_CAPTURE; // request a buffer wich we can use for capturing frames
     requestBuffer.memory = V4L2_MEMORY_MMAP;
 
     if(ioctl(fd, VIDIOC_REQBUFS, &requestBuffer) < 0){
@@ -76,11 +79,11 @@ static int read_video(const char* device, int width, int height, const char* jpg
 
     // 5. Quety the buffer to get raw data ie. ask for the you requested buffer
     // and allocate memory for it
-    v4l2_buffer queryBuffer = {0};
+    v4l2_buffer queryBuffer;// = {0};
     queryBuffer.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
     queryBuffer.memory = V4L2_MEMORY_MMAP;
     queryBuffer.index = 0;
-    if(ioctl(fd, VIDIOC_QUERYBUF, &queryBuffer) < 0){
+    if(ioctl(fd, VIDIOC_QUERYBUF, &queryBuffer) < 0) {
         cerr << "Device did not return the buffer information, VIDIOC_QUERYBUF" << endl;
 	    close(fd);
         return -5;
@@ -88,8 +91,7 @@ static int read_video(const char* device, int width, int height, const char* jpg
     // use a pointer to point to the newly created buffer
     // mmap() will map the memory address of the device to
     // an address in memory
-    char* buffer = (char*)mmap(NULL, queryBuffer.length, PROT_READ | PROT_WRITE, MAP_SHARED,
-                        fd, queryBuffer.m.offset);
+    char* buffer = (char*)mmap(NULL, queryBuffer.length, PROT_READ | PROT_WRITE, MAP_SHARED, fd, queryBuffer.m.offset);
     memset(buffer, 0, queryBuffer.length);
 
 
@@ -136,7 +138,7 @@ static int read_video(const char* device, int width, int height, const char* jpg
     int remainingBufferSize = bufferinfo.bytesused; // the remaining buffer size, is decremented by
                                                     // memBlockSize amount on each loop so we do not overwrite the buffer
     char* outFileMemBlock = NULL;  // a pointer to a new memory block
-    int itr = 0; // counts thenumber of iterations
+    //int itr = 0; // counts thenumber of iterations
     while(remainingBufferSize > 0) {
         bufPos += outFileMemBlockSize;  // increment the buffer pointer on each loop
                                         // initialise bufPos before outFileMemBlockSize so we can start
@@ -184,34 +186,96 @@ static int read_video(const char* device, int width, int height, const char* jpg
 
 int main(int argc, char** argv) {
     const char* device = "/dev/video0";
-    const char* filename = "webcam_output.jpeg";
+    const char* c_filename = "camera.jpeg";
+    const char* d_filename = "ndvi.jpeg";
+    bool delete_camera = true;
+    bool verbose = false;
     
-    if (argc > 1) device = argv[1];
-    if (argc > 2) filename = argv[2];
+    if(argc < 2) {
+    	cout << "Infragram NDVI processing program" << endl;
+    	cout << "  2018, Felix Niederwanger" << endl;
+    	cout << endl;
+    	cout << "This program reads a picture from a INFRAGRAM camera and writes the NDVI processed jpeg picture to a file" << endl;
+    	cout << "Usage: " << argv[0] << " JPEG" << endl;
+    	cout << "  For help type " << argv[0] << " --help" << endl;
+    	return EXIT_SUCCESS;
+    }
+    
+    int iarg = 0;
+    for(int i=1; i<argc; i++) {
+    	string arg(argv[i]);
+    	if(arg.size() == 0) continue;
+    	if(arg.at(0) == '-') {		// Command
+    		if (arg == "-h" || arg == "--help") {
+    			cout << "Infragram NDVI processing program" << endl;
+				cout << "  2018, Felix Niederwanger" << endl;
+				cout << endl;
+				cout << "This program reads a picture from a INFRAGRAM camera and writes the NDVI processed jpeg picture to a file" << endl;
+				cout << "Usage: " << argv[0] << " [OPTIONS] NDVI-JPEG [CAMERA-JPEG]" << endl;
+				cout << endl;
+				cout << "Examples" << endl;
+				cout << "  " << argv[0] << " my_awesome_picture.jpg                  Writes NDVI JPEG to 'my_awesome_picture.jpg'" << endl;
+				cout << "  " << argv[0] << " -i /dev/video1 my_awesome_picture.jpg   Reads from /dev/video1 and writes NDVI JPEG to 'my_awesome_picture.jpg'" << endl;
+				cout << "  " << argv[0] << " -i /dev/video1 ndvi.jpg raw.jpg         Reads from /dev/video1, writes camera file to 'raw.jpg' and the ndvi file to 'ndvi.jpg'" << endl;
+				cout << endl;
+				cout << "OPTIONS" << endl;
+				cout << "   -i,-dev DEVICE                     Set device where to read from (see 'ls /dev/video*')" << endl;
+				cout << "   -v, --verbose                      Verbose mode" << endl;
+    		} else if(arg == "-v" || arg == "--verbose") {
+    			verbose = true;
+    		} else if(arg == "-i" || arg == "--device" || arg == "--dev") {
+    			device = argv[++i];
+    		} else {
+    			cerr << "Illegal option: " << arg << endl;
+    			return EXIT_FAILURE;
+    		}
+    	} else {
+    		if (iarg == 0) {
+    			d_filename = argv[i];
+    		} else if(iarg == 1) {
+    			c_filename = argv[i];
+    			delete_camera = false;
+    		} else {
+    			cerr << "Too many arguments given" << endl;
+    			return EXIT_FAILURE;
+    		}
+    		iarg++;
+    	}
+    }
     
     
-    ::unlink(filename);
- 	int ret = read_video(device, 1900, 600, filename);
+    ::unlink(c_filename);
+    if(verbose) { cout << "Reading image (" << device << ") ... " << endl; }
+ 	int ret = read_video(device, 1600, 1200, c_filename);
  	if(ret != 0) {
  		cerr << "Error reading from camera: (" << ret << ") - " << strerror(errno) << endl;
  		return EXIT_FAILURE;
  	}
- 	cout << "Image received - saved to " << filename << endl;
+ 	if(verbose)
+ 		cout << "Image received from camera (" << c_filename << ")" << endl;
  
  	try {
- 		Jpeg jpeg(filename);
+ 		Jpeg jpeg(c_filename);
+ 		if(verbose) cout << "NDVI-processing image ... " << endl;
  		Jpeg j_ndvi = ndvi(jpeg);
  		
- 		::unlink("output.jpeg");
- 		j_ndvi.write("output.jpeg");
+ 		if(delete_camera)
+ 			::unlink(c_filename);
+ 		::unlink(d_filename);
+ 		j_ndvi.write(d_filename);
  		
- 		cout << "NDVI written to 'output.jpeg'" << endl;
  	} catch (const char* err) {
- 		cerr << "Error processing image: " << err << endl;
+ 		cerr << "Error processing image: " << err;
+ 		if(errno != 0) cerr << " (" << strerror(errno) << ")";
+ 		cerr << endl;
  		return EXIT_FAILURE;
  	}
- 	
- 	// Now we need to read
+ 
+ 	if(verbose) {
+ 		cout << "Process completed" << endl;
+ 		if(!delete_camera) cout << "  Camera picture written to " << c_filename << endl;
+ 		cout << "  NDVI image written to " << d_filename << endl;
+ 	}	
  	
     return EXIT_SUCCESS;
 }
